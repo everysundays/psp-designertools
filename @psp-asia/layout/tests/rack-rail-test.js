@@ -85,4 +85,29 @@ for (const dir of ['valid', 'invalid']) {
     }
 }
 
-console.log(`OK: ${passed} fixture(s) obey the rack/rail contract (valid passes, invalid fails)`);
+// ---- CSS smoke test: the stylesheet must still define the whole system.
+const css = readFileSync(join(__dirname, '..', 'grid.css'), 'utf8');
+const required = [
+    '.rack, .rail',                       // containers
+    '.rack { flex-wrap: wrap;',
+    '.rail {',
+    '.rail::-webkit-scrollbar { display: none;',
+    '--psp-gap: 16px',
+    '--psp-gutter: 20px',
+    '--psp-peek: 32px',
+    'scroll-padding-inline: var(--psp-gutter)',   // regression: 8px cuts the first card's gutter
+    '.rail > *:first-child { margin-left: auto; scroll-snap-align: start; }',
+    '.rail > *:last-child  { margin-right: auto; }',
+    '.rail > *:not(:first-child) { scroll-snap-align: center; }',
+];
+for (let n = 1; n <= 12; n++) {
+    required.push(`.rack .col-${n}`);
+    required.push(`.rail .col-${n}`);
+}
+for (let n = 1; n <= 11; n++) required.push(`.rack .offset-${n}`);
+for (const s of required) {
+    assert.ok(css.includes(s), `grid.css missing: ${s}`);
+}
+assert.ok(!css.includes('scroll-padding-inline: 8px'), 'grid.css regressed: hard-coded 8px scroll-padding (cuts first card gutter)');
+
+console.log(`OK: ${passed} fixture(s) + ${required.length} CSS smoke checks pass (valid passes, invalid fails)`);

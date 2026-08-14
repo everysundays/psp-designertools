@@ -150,6 +150,11 @@ Fixed-width cards, never wraps, scrollbar hidden:
 
 ## Changelog
 
+- **1.3.1** — polish: rail rules merged into one block; duplicate first-child
+  rule collapsed; header comment condensed (contract/gotchas live in README —
+  single source of truth); CSS smoke checks added to `npm test` (46 assertions
+  on selectors/vars + a regression guard for the 8px snap-padding bug); GitHub
+  Actions CI (runs `npm test` on every push).
 - **1.3.0** — usage contract + gotchas in `grid.css` header; rail
   enhancements (snap w/ gutter-correct `scroll-padding-inline`, auto-centering,
   shadow padding) moved in from consumer CSS; fixture-based rule test

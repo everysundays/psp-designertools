@@ -1,56 +1,23 @@
-/* PSP Rack & Rail Grid v1.3.0 (flexbox + calc)
+/* PSP Rack & Rail Grid v1.3.1 (flexbox + calc)
  *
  * Built from the Figma spec (Foundations → Rack & Rail, May 2025):
  * - sm  (0–767):    col-1 = half row, col-2..12 = full row
  * - md  (768–1023): complementary pairs — col-1+col-6, col-2+col-5,
  *                   col-3+col-4 each fill a row; col-7..12 full row
  * - lg+ (1024+):    12-col formula col-N = N·unit + (N−1)·gap,
- *                   exact at EVERY viewport width (calc), matches the
- *                   design tables at 1440 (unit 100) and 1800 (unit 130)
- * - offsets:        always center the complementary column:
- *                   margin = (100% − col-(12−N)) / 2 — can never go stale
- * - rail:           fixed-width cards col-1..7; col-8..11 (lg+) = rack
- *                   width minus 32px peek; col-12 = full width minus peek
+ *                   exact at EVERY viewport width (calc)
+ * - offsets:        self-centering, derived from column widths
+ * - rail:           fixed-width cards, horizontal scroll, snap
  *
  * Plain CSS — no Tailwind build required. Works as <link> or @import.
- * ponytail: md rail col-12 deviates from spec table (738px fixed) — calc
- * peek keeps a constant 32px reveal at all widths, which matches intent.
  *
- * ─────────────────────────────────────────────────────────────────────
- * USAGE CONTRACT (must never be broken)
- * ─────────────────────────────────────────────────────────────────────
- * 1. `.rack` and `.rail` are the ONLY layout containers. They sit at
- *    section level and contain only `col-N` / `offset-N` children.
- * 2. NO NESTING — a rack/rail must never appear inside another rack/rail
- *    (rack-in-rack, rail-in-rack, rack-in-rail, rail-in-rail all banned).
- *    Card groups inside a col-N may NOT be re-created with a nested rack;
- *    restructure the section so each row is its own section-level rack,
- *    or use a rail for horizontally scrolling strips.
- * 3. NEVER mix in another layout system (e.g. Tailwind `grid grid-cols-*`
- *    / `col-span-*`) — that creates two competing control systems and
- *    breaks the column math.
- * 4. Every rack row must total EXACTLY 12 columns (col-N + offset-N).
- *    To center a group narrower than 12, prepend an offset so the row
- *    sums to 12, e.g. 3×col-3 (= col-9) + offset-3 = 12; a lone
- *    col-8 + offset-4 = 12. Never leave a row under 12 and hand-center it.
- * 5. No responsive prefixes — never write `md:col-6`; breakpoints are
- *    built in.
- *
- * GOTCHAS (learned in the field — see README "Pitfalls")
- * ─────────────────────────────────────────────────────────────────────
- * - Scroll-snap (below) anchors to the rail's BORDER edge — the rail's
- *   own padding lives INSIDE the scrollable area and is ignored by snap.
- *   scroll-padding-inline must therefore equal var(--psp-gutter); a small
- *   fixed value (e.g. 8px) cuts the first card's gutter on overflowing
- *   rails.
- * - md complementary pairs are unpredictable for 3×col-4 groups (the
- *   third card drifts to a lone row). Consumers may override md to a
- *   true 12-column ladder at (min-width: 48rem) — see README.
- * - offset-N inside full-bleed hero containers computes from the hero
- *   width, not the page column — prefer flex `justify-end` there.
- * - col-N classes are scoped: a col-N OUTSIDE a rack/rail has no width.
- *   Never hand-patch this file in node_modules — backport to source and
- *   republish, or the fix is lost on the next install.
+ * USAGE CONTRACT + PITFALLS → README.md (Rules / Rails / Pitfalls). The
+ * full contract and every field-learned gotcha live there; short version:
+ * rack/rail at section level only, never nested (rack-in-rack, rail-in-rack,
+ * rack-in-rail, rail-in-rail banned), never mixed with other layout systems;
+ * every rack row totals exactly 12 columns; no responsive prefixes.
+ * NEVER hand-patch this file in node_modules — backport to the source repo
+ * and republish, or the fix is lost on the next install.
  */
 
 /* Cascade layer: utilities (items-center, gap-*, p-*) must beat the grid */
@@ -79,28 +46,23 @@
     overflow-x: auto;
     scrollbar-width: none;
     -ms-overflow-style: none;
-  }
-  .rail::-webkit-scrollbar { display: none; }
-
-  /* ── Rail enhancements ─────────────────────────────────────────────
-   * 1. Vertical padding so card shadows are never clipped by overflow-x.
-   * 2. First/last auto-margin: center the row when it FITS (big screens);
-   *    when it overflows the auto margins collapse to 0 and the content
-   *    scrolls from the start (no clipping).
-   * 3. Scroll-snap: cards snap as you slide; the 2nd+ card locks to the
-   *    middle. scroll-padding-inline MUST be var(--psp-gutter): the snap
-   *    container starts at the rail's border edge (padding is inside the
-   *    scrollable area), so a smaller value would pin the first card
-   *    INSIDE the gutter. */
-  .rail {
+    /* Rail enhancements (see README "Rails"): vertical padding so card
+       shadows are never clipped by overflow-x; scroll-snap; scroll-padding
+       MUST match the gutter — the snap container starts at the rail's
+       border edge (padding is inside the scrollable area), so a smaller
+       value would pin the first card INSIDE the gutter. */
     padding-top: 16px;
     padding-bottom: 16px;
     scroll-snap-type: x mandatory;
     scroll-padding-inline: var(--psp-gutter);
   }
-  .rail > *:first-child { margin-left: auto; }
+  .rail::-webkit-scrollbar { display: none; }
+
+  /* Auto-centering + snap: row centers when it fits (big screens); when it
+     overflows the auto margins collapse to 0 and content scrolls from the
+     start; the 2nd+ card locks to the middle while sliding. */
+  .rail > *:first-child { margin-left: auto; scroll-snap-align: start; }
   .rail > *:last-child  { margin-right: auto; }
-  .rail > *:first-child { scroll-snap-align: start; }
   .rail > *:not(:first-child) { scroll-snap-align: center; }
 
   /* Column widths — sm defaults */
