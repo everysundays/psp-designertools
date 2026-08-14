@@ -1,0 +1,198 @@
+/* PSP Rack & Rail Grid v1.3.0 (flexbox + calc)
+ *
+ * Built from the Figma spec (Foundations → Rack & Rail, May 2025):
+ * - sm  (0–767):    col-1 = half row, col-2..12 = full row
+ * - md  (768–1023): complementary pairs — col-1+col-6, col-2+col-5,
+ *                   col-3+col-4 each fill a row; col-7..12 full row
+ * - lg+ (1024+):    12-col formula col-N = N·unit + (N−1)·gap,
+ *                   exact at EVERY viewport width (calc), matches the
+ *                   design tables at 1440 (unit 100) and 1800 (unit 130)
+ * - offsets:        always center the complementary column:
+ *                   margin = (100% − col-(12−N)) / 2 — can never go stale
+ * - rail:           fixed-width cards col-1..7; col-8..11 (lg+) = rack
+ *                   width minus 32px peek; col-12 = full width minus peek
+ *
+ * Plain CSS — no Tailwind build required. Works as <link> or @import.
+ * ponytail: md rail col-12 deviates from spec table (738px fixed) — calc
+ * peek keeps a constant 32px reveal at all widths, which matches intent.
+ *
+ * ─────────────────────────────────────────────────────────────────────
+ * USAGE CONTRACT (must never be broken)
+ * ─────────────────────────────────────────────────────────────────────
+ * 1. `.rack` and `.rail` are the ONLY layout containers. They sit at
+ *    section level and contain only `col-N` / `offset-N` children.
+ * 2. NO NESTING — a rack/rail must never appear inside another rack/rail
+ *    (rack-in-rack, rail-in-rack, rack-in-rail, rail-in-rail all banned).
+ *    Card groups inside a col-N may NOT be re-created with a nested rack;
+ *    restructure the section so each row is its own section-level rack,
+ *    or use a rail for horizontally scrolling strips.
+ * 3. NEVER mix in another layout system (e.g. Tailwind `grid grid-cols-*`
+ *    / `col-span-*`) — that creates two competing control systems and
+ *    breaks the column math.
+ * 4. Every rack row must total EXACTLY 12 columns (col-N + offset-N).
+ *    To center a group narrower than 12, prepend an offset so the row
+ *    sums to 12, e.g. 3×col-3 (= col-9) + offset-3 = 12; a lone
+ *    col-8 + offset-4 = 12. Never leave a row under 12 and hand-center it.
+ * 5. No responsive prefixes — never write `md:col-6`; breakpoints are
+ *    built in.
+ *
+ * GOTCHAS (learned in the field — see README "Pitfalls")
+ * ─────────────────────────────────────────────────────────────────────
+ * - Scroll-snap (below) anchors to the rail's BORDER edge — the rail's
+ *   own padding lives INSIDE the scrollable area and is ignored by snap.
+ *   scroll-padding-inline must therefore equal var(--psp-gutter); a small
+ *   fixed value (e.g. 8px) cuts the first card's gutter on overflowing
+ *   rails.
+ * - md complementary pairs are unpredictable for 3×col-4 groups (the
+ *   third card drifts to a lone row). Consumers may override md to a
+ *   true 12-column ladder at (min-width: 48rem) — see README.
+ * - offset-N inside full-bleed hero containers computes from the hero
+ *   width, not the page column — prefer flex `justify-end` there.
+ * - col-N classes are scoped: a col-N OUTSIDE a rack/rail has no width.
+ *   Never hand-patch this file in node_modules — backport to source and
+ *   republish, or the fix is lost on the next install.
+ */
+
+/* Cascade layer: utilities (items-center, gap-*, p-*) must beat the grid */
+@layer components {
+  :root {
+    --psp-gap: 16px;
+    --psp-gutter: 20px;
+    --psp-peek: 32px;
+  }
+  @media (min-width: 48rem) { :root { --psp-gutter: 40px; } }
+  @media (min-width: 64rem) { :root { --psp-gutter: 32px; } }
+
+  /* Containers */
+  .rack, .rail {
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: var(--psp-gap);
+    padding-left: var(--psp-gutter);
+    padding-right: var(--psp-gutter);
+  }
+  .rack { flex-wrap: wrap; }
+  .rail {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .rail::-webkit-scrollbar { display: none; }
+
+  /* ── Rail enhancements ─────────────────────────────────────────────
+   * 1. Vertical padding so card shadows are never clipped by overflow-x.
+   * 2. First/last auto-margin: center the row when it FITS (big screens);
+   *    when it overflows the auto margins collapse to 0 and the content
+   *    scrolls from the start (no clipping).
+   * 3. Scroll-snap: cards snap as you slide; the 2nd+ card locks to the
+   *    middle. scroll-padding-inline MUST be var(--psp-gutter): the snap
+   *    container starts at the rail's border edge (padding is inside the
+   *    scrollable area), so a smaller value would pin the first card
+   *    INSIDE the gutter. */
+  .rail {
+    padding-top: 16px;
+    padding-bottom: 16px;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--psp-gutter);
+  }
+  .rail > *:first-child { margin-left: auto; }
+  .rail > *:last-child  { margin-right: auto; }
+  .rail > *:first-child { scroll-snap-align: start; }
+  .rail > *:not(:first-child) { scroll-snap-align: center; }
+
+  /* Column widths — sm defaults */
+  .rack, .rail {
+    --c1: calc((100% - var(--psp-gap)) / 2);
+    --c2: 100%; --c3: 100%; --c4: 100%; --c5: 100%; --c6: 100%;
+    --c7: 100%; --c8: 100%; --c9: 100%; --c10: 100%; --c11: 100%;
+    --c12: 100%;
+    --r1: 260px; --r2: 320px; --r3: 320px; --r4: 320px; --r5: 320px;
+    --r6: 320px; --r7: 320px; --r8: 320px; --r9: 320px; --r10: 320px;
+    --r11: 320px; --r12: calc(100% - var(--psp-peek));
+  }
+
+  /* md — complementary pairs (ratios from spec: 222:456, 277:401, 339:339 of 678) */
+  @media (min-width: 48rem) {
+    .rack, .rail {
+      --c1: calc((100% - var(--psp-gap)) * 0.3274);
+      --c2: calc((100% - var(--psp-gap)) * 0.4086);
+      --c3: calc((100% - var(--psp-gap)) * 0.5);
+      --c4: calc((100% - var(--psp-gap)) * 0.5);
+      --c5: calc((100% - var(--psp-gap)) * 0.5914);
+      --c6: calc((100% - var(--psp-gap)) * 0.6726);
+      --r3: 320px; --r4: 400px; --r5: 450px; --r6: 492px; --r7: 534px;
+      --r8: 577px; --r9: 620px; --r10: 663px; --r11: 706px;
+    }
+  }
+
+  /* lg+ — 12-column formula, one unit drives everything */
+  @media (min-width: 64rem) {
+    .rack, .rail {
+      --u: calc((100% - 11 * var(--psp-gap)) / 12);
+      --c1: var(--u);
+      --c2: calc(2 * var(--u) + var(--psp-gap));
+      --c3: calc(3 * var(--u) + 2 * var(--psp-gap));
+      --c4: calc(4 * var(--u) + 3 * var(--psp-gap));
+      --c5: calc(5 * var(--u) + 4 * var(--psp-gap));
+      --c6: calc(6 * var(--u) + 5 * var(--psp-gap));
+      --c7: calc(7 * var(--u) + 6 * var(--psp-gap));
+      --c8: calc(8 * var(--u) + 7 * var(--psp-gap));
+      --c9: calc(9 * var(--u) + 8 * var(--psp-gap));
+      --c10: calc(10 * var(--u) + 9 * var(--psp-gap));
+      --c11: calc(11 * var(--u) + 10 * var(--psp-gap));
+      --r3: 364px; --r5: 470px; --r6: 512px; --r7: 555px;
+      --r8: calc(8 * var(--u) + 7 * var(--psp-gap) - var(--psp-peek));
+      --r9: calc(9 * var(--u) + 8 * var(--psp-gap) - var(--psp-peek));
+      --r10: calc(10 * var(--u) + 9 * var(--psp-gap) - var(--psp-peek));
+      --r11: calc(11 * var(--u) + 10 * var(--psp-gap) - var(--psp-peek));
+    }
+  }
+
+  /* Rack columns */
+  .rack .col-1  { width: var(--c1);  flex-shrink: 0; }
+  .rack .col-2  { width: var(--c2);  flex-shrink: 0; }
+  .rack .col-3  { width: var(--c3);  flex-shrink: 0; }
+  .rack .col-4  { width: var(--c4);  flex-shrink: 0; }
+  .rack .col-5  { width: var(--c5);  flex-shrink: 0; }
+  .rack .col-6  { width: var(--c6);  flex-shrink: 0; }
+  .rack .col-7  { width: var(--c7);  flex-shrink: 0; }
+  .rack .col-8  { width: var(--c8);  flex-shrink: 0; }
+  .rack .col-9  { width: var(--c9);  flex-shrink: 0; }
+  .rack .col-10 { width: var(--c10); flex-shrink: 0; }
+  .rack .col-11 { width: var(--c11); flex-shrink: 0; }
+  .rack .col-12 { width: var(--c12); flex-shrink: 0; }
+
+  /* Rail columns (fixed cards; col-12 slides with 32px peek) */
+  .rail .col-1  { width: var(--r1);  min-width: var(--r1);  flex-shrink: 0; }
+  .rail .col-2  { width: var(--r2);  min-width: var(--r2);  flex-shrink: 0; }
+  .rail .col-3  { width: var(--r3);  min-width: var(--r3);  flex-shrink: 0; }
+  .rail .col-4  { width: var(--r4);  min-width: var(--r4);  flex-shrink: 0; }
+  .rail .col-5  { width: var(--r5);  min-width: var(--r5);  flex-shrink: 0; }
+  .rail .col-6  { width: var(--r6);  min-width: var(--r6);  flex-shrink: 0; }
+  .rail .col-7  { width: var(--r7);  min-width: var(--r7);  flex-shrink: 0; }
+  .rail .col-8  { width: var(--r8);  min-width: var(--r8);  flex-shrink: 0; }
+  .rail .col-9  { width: var(--r9);  min-width: var(--r9);  flex-shrink: 0; }
+  .rail .col-10 { width: var(--r10); min-width: var(--r10); flex-shrink: 0; }
+  .rail .col-11 { width: var(--r11); min-width: var(--r11); flex-shrink: 0; }
+  .rail .col-12 { width: var(--r12); min-width: var(--r12); flex-shrink: 0; }
+
+  /* Offsets — self-centering: margin = (100% − complementary column) / 2.
+   * Full-width complements yield 0 automatically (sm/md small offsets). */
+  .rack .offset-1,  .rail .offset-1  { margin-left: calc((100% - var(--c11)) / 2); }
+  .rack .offset-2,  .rail .offset-2  { margin-left: calc((100% - var(--c10)) / 2); }
+  .rack .offset-3,  .rail .offset-3  { margin-left: calc((100% - var(--c9))  / 2); }
+  .rack .offset-4,  .rail .offset-4  { margin-left: calc((100% - var(--c8))  / 2); }
+  .rack .offset-5,  .rail .offset-5  { margin-left: calc((100% - var(--c7))  / 2); }
+  .rack .offset-6,  .rail .offset-6  { margin-left: calc((100% - var(--c6))  / 2); }
+  .rack .offset-7,  .rail .offset-7  { margin-left: calc((100% - var(--c5))  / 2); }
+  .rack .offset-8,  .rail .offset-8  { margin-left: calc((100% - var(--c4))  / 2); }
+  .rack .offset-9,  .rail .offset-9  { margin-left: calc((100% - var(--c3))  / 2); }
+  .rack .offset-10, .rail .offset-10 { margin-left: calc((100% - var(--c2))  / 2); }
+  .rack .offset-11, .rail .offset-11 { margin-left: calc((100% - var(--c1))  / 2); }
+
+  /* Override legacy slide-gap rule when appended after twlayout output */
+  .rail:has(.col-12) { gap: var(--psp-gap); }
+}

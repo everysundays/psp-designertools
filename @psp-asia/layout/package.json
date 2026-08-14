@@ -1,0 +1,29 @@
+{
+  "name": "@psp-asia/layout",
+  "version": "1.3.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "description": "PSP Rack & Rail layout system — rack/rail grid with usage contract, rail enhancements (scroll-snap, auto-centering), and fixture-based rule tests",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/everysundays/packages.git"
+  },
+  "files": [
+    "grid.css",
+    "debug.css",
+    "debug.js"
+  ],
+  "exports": {
+    "./grid.css": "./grid.css",
+    "./debug.css": "./debug.css",
+    "./debug.js": "./debug.js"
+  },
+  "scripts": {
+    "test": "node tests/rack-rail-test.js"
+  },
+  "devDependencies": {
+    "node-html-parser": "^7.0.1"
+  }
+}
