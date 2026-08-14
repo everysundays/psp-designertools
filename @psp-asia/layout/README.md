@@ -150,6 +150,8 @@ Fixed-width cards, never wraps, scrollbar hidden:
 
 ## Changelog
 
+- **1.4.0** — renumbered release of 1.3.1 (rail rules merged, condensed
+  header, CSS smoke tests, CI workflow). Same content as 1.3.1.
 - **1.3.1** — polish: rail rules merged into one block; duplicate first-child
   rule collapsed; header comment condensed (contract/gotchas live in README —
   single source of truth); CSS smoke checks added to `npm test` (46 assertions
